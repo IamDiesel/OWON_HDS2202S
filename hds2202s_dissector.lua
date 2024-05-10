@@ -23,7 +23,8 @@ local field_scpi_data_out = ProtoField.string(
     base.none
 )
 local field_scpi_header_scale = ProtoField.string(
-    "owon_bulk.scpi_header_in",
+    --"owon_bulk.scpi_header_in",
+    "owon_bulk.scpi_header",
     "SCALE",
     base.none)
 
@@ -92,9 +93,16 @@ function owon_bulk.dissector(buffer, pinfo, tree)
                         append_to_title(pinfo, ", OWON HOST *IDN?")
                     end
                 else
-                    local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
-                    subtree:add(field_scpi_data_out, buffer(payload_offset,packet_data_length))
-                    append_to_title(pinfo, ", OWON HOST")
+                    if scpi_id == 0x3a --':' identifies root command
+                    then
+                        local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
+                        subtree:add(field_scpi_data_in, buffer(payload_offset,packet_data_length))
+                        append_to_title(pinfo, "OWON HOST ROOT CMD:    " .. buffer(payload_offset,packet_data_length):string())
+                    else
+                        local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
+                        subtree:add(field_scpi_data_out, buffer(payload_offset,packet_data_length))
+                        append_to_title(pinfo, ", OWON HOST")
+                    end
                 end
             end
         else --direction in
@@ -110,14 +118,41 @@ function owon_bulk.dissector(buffer, pinfo, tree)
                     local mystr = buffer(payload_offset+4,packet_data_length-4):string()
                     local jsonobj = json.decode(mystr)
                     --print(jsonobj['TIMEBASE']['SCALE'])
-                    subtree:add(field_scpi_header_scale, "SCALE:", jsonobj['TIMEBASE']['SCALE'])
+                    subtree:add(field_scpi_header_scale, "SCALE:        ", jsonobj['TIMEBASE']['SCALE'])
+                    subtree:add(field_scpi_header_scale, "HOFFSET:      ", jsonobj['TIMEBASE']['HOFFSET'])
+                    subtree:add(field_scpi_header_scale, "FULLSCREEN:   ", jsonobj['SAMPLE']['FULLSCREEN'])
+                    subtree:add(field_scpi_header_scale, "SLOWMOVE:     ", jsonobj['SAMPLE']['SLOWMOVE'])
+                    subtree:add(field_scpi_header_scale, "DATALEN:      ", jsonobj['SAMPLE']['DATALEN'])
+                    subtree:add(field_scpi_header_scale, "SAMPLERATE:   ", jsonobj['SAMPLE']['SAMPLERATE'])
+                    subtree:add(field_scpi_header_scale, "TYPE:         ", jsonobj['SAMPLE']['TYPE'])
+                    subtree:add(field_scpi_header_scale, "DEPMEM:       ", jsonobj['SAMPLE']['DEPMEM'])
+                    subtree:add(field_scpi_header_scale, "CH1 NAME:     ", jsonobj['CHANNEL'][1]['NAME'])
+                    subtree:add(field_scpi_header_scale, "CH1 DISPLAY:  ", jsonobj['CHANNEL'][1]['DISPLAY'])
+                    subtree:add(field_scpi_header_scale, "CH1 COUPLING: ", jsonobj['CHANNEL'][1]['COUPLING'])
+                    subtree:add(field_scpi_header_scale, "CH1 PROBE:    ", jsonobj['CHANNEL'][1]['PROBE'])
+                    subtree:add(field_scpi_header_scale, "CH1 SCALE:    ", jsonobj['CHANNEL'][1]['SCALE'])
+                    subtree:add(field_scpi_header_scale, "CH1 OFFSET:   ", jsonobj['CHANNEL'][1]['OFFSET'])
+                    subtree:add(field_scpi_header_scale, "CH1 FREQUENCY:", jsonobj['CHANNEL'][1]['FREQUENCE'])
+                    subtree:add(field_scpi_header_scale, "CH2 NAME:     ", jsonobj['CHANNEL'][2]['NAME'])
+                    subtree:add(field_scpi_header_scale, "CH2 DISPLAY:  ", jsonobj['CHANNEL'][2]['DISPLAY'])
+                    subtree:add(field_scpi_header_scale, "CH2 COUPLING: ", jsonobj['CHANNEL'][2]['COUPLING'])
+                    subtree:add(field_scpi_header_scale, "CH2 PROBE:    ", jsonobj['CHANNEL'][2]['PROBE'])
+                    subtree:add(field_scpi_header_scale, "CH2 SCALE:    ", jsonobj['CHANNEL'][2]['SCALE'])
+                    subtree:add(field_scpi_header_scale, "CH2 OFFSET:   ", jsonobj['CHANNEL'][2]['OFFSET'])
+                    subtree:add(field_scpi_header_scale, "CH2 FREQUENCY:", jsonobj['CHANNEL'][2]['FREQUENCE'])
+                    subtree:add(field_scpi_header_scale, "DATATYPE:     ", jsonobj['DATATYPE'])
+                    subtree:add(field_scpi_header_scale, "RUNSTATUS:    ", jsonobj['RUNSTATUS'])
+                    subtree:add(field_scpi_header_scale, "IDN:          ", jsonobj['IDN'])
+                    subtree:add(field_scpi_header_scale, "MODEL:        ", jsonobj['MODEL'])
+                    subtree:add(field_scpi_header_scale, "Trigger Mode: ", jsonobj['Trig']['Mode'])
+                    subtree:add(field_scpi_header_scale, "Trigger Type: ", jsonobj['Trig']['Type'])
+                    subtree:add(field_scpi_header_scale, "Trig Channel: ", jsonobj['Trig']['Items']['Channel'])
+                    subtree:add(field_scpi_header_scale, "Trig Level:   ", jsonobj['Trig']['Items']['Level'])
+                    subtree:add(field_scpi_header_scale, "Trig Edge:    ", jsonobj['Trig']['Items']['Edge'])
+                    subtree:add(field_scpi_header_scale, "Trig Coupling:", jsonobj['Trig']['Items']['Coupling'])
+                    subtree:add(field_scpi_header_scale, "Trig Sweep:   ", jsonobj['Trig']['Items']['Sweep'])
+                    print(jsonobj['CHANNEL'][1]['NAME'])
                     append_to_title(pinfo, ",  OWON OSCI HEADER")
-                end
-                if scpi_id == 0x3a --':' identifies root command
-                then
-                    local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
-                    subtree:add(field_scpi_data_in, buffer(payload_offset,packet_data_length))
-                    append_to_title(pinfo, ",  OWON OSCI")
                 end
             end
         end
