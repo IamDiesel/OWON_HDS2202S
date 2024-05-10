@@ -12,6 +12,11 @@ local field_scpi_data_in = ProtoField.string(
     "Oscilloscope Output",
     base.none
 )
+local field_scpi_meas_data_in = ProtoField.string(
+    "owon_bulk.scpi_meas_data_in",
+    "Oscilloscope Measurement",
+    base.none
+)
 local field_scpi_header_in = ProtoField.string(
     "owon_bulk.scpi_header_in",
     "Oscilloscope Header",
@@ -30,6 +35,7 @@ local field_scpi_header_scale = ProtoField.string(
 
 owon_bulk.fields =
 {
+    field_scpi_meas_data_in,
     field_scpi_data_in,
     field_scpi_data_out,
     field_scpi_header_in
@@ -47,6 +53,13 @@ end
 
 function append_to_title(pinfo, text)
     pinfo.cols.info:set(tostring(pinfo.cols.info)..text)
+end
+
+function appendMeasurementPoints(buffer, amount_points, subtree, payload_offset)
+    for i=1,amount_points do
+        --(payload_offset+4+i-1)
+        subtree:add(field_scpi_meas_data_in, "[".. i .. "]: " .. buffer(payload_offset+4+i-1,1):uint())
+    end
 end
 
 --
@@ -97,11 +110,11 @@ function owon_bulk.dissector(buffer, pinfo, tree)
                     then
                         local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
                         subtree:add(field_scpi_data_in, buffer(payload_offset,packet_data_length))
-                        append_to_title(pinfo, "OWON HOST ROOT CMD:    " .. buffer(payload_offset,packet_data_length):string())
+                        append_to_title(pinfo, ", OWON HOST ROOT CMD:    " .. buffer(payload_offset,packet_data_length):string())
                     else
                         local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
                         subtree:add(field_scpi_data_out, buffer(payload_offset,packet_data_length))
-                        append_to_title(pinfo, ", OWON HOST")
+                        append_to_title(pinfo, ", OWON HOST UNKNOWN")
                     end
                 end
             end
@@ -133,6 +146,8 @@ function owon_bulk.dissector(buffer, pinfo, tree)
                     subtree:add(field_scpi_header_scale, "CH1 SCALE:    ", jsonobj['CHANNEL'][1]['SCALE'])
                     subtree:add(field_scpi_header_scale, "CH1 OFFSET:   ", jsonobj['CHANNEL'][1]['OFFSET'])
                     subtree:add(field_scpi_header_scale, "CH1 FREQUENCY:", jsonobj['CHANNEL'][1]['FREQUENCE'])
+                    --print("here")
+                    --print(jsonobj['CHANNEL'][1]['FREQUENCE'])
                     subtree:add(field_scpi_header_scale, "CH2 NAME:     ", jsonobj['CHANNEL'][2]['NAME'])
                     subtree:add(field_scpi_header_scale, "CH2 DISPLAY:  ", jsonobj['CHANNEL'][2]['DISPLAY'])
                     subtree:add(field_scpi_header_scale, "CH2 COUPLING: ", jsonobj['CHANNEL'][2]['COUPLING'])
@@ -151,9 +166,28 @@ function owon_bulk.dissector(buffer, pinfo, tree)
                     subtree:add(field_scpi_header_scale, "Trig Edge:    ", jsonobj['Trig']['Items']['Edge'])
                     subtree:add(field_scpi_header_scale, "Trig Coupling:", jsonobj['Trig']['Items']['Coupling'])
                     subtree:add(field_scpi_header_scale, "Trig Sweep:   ", jsonobj['Trig']['Items']['Sweep'])
-                    print(jsonobj['CHANNEL'][1]['NAME'])
+                    --print(jsonobj['CHANNEL'][1]['NAME'])
                     append_to_title(pinfo, ",  OWON OSCI HEADER")
+
+                else
+                    local first_two = buffer_to_uint32(buffer(payload_offset,4))
+                    --print("FirstTwo: " .. first_two)
+                    if first_two == 300 or first_two == 600
+                    then
+                        local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
+                        --subtree:add(field_scpi_data_in, buffer(payload_offset,packet_data_length))
+                        appendMeasurementPoints(buffer,first_two, subtree, payload_offset)
+                        append_to_title(pinfo, ",  OWON OSCI MEASUREMENT " .. first_two .. " points")
+                    else
+                        local subtree = tree:add(owon_bulk, buffer(payload_offset, packet_data_length))
+                        subtree:add(field_scpi_data_in, buffer(payload_offset,packet_data_length))
+                        append_to_title(pinfo, ",  OWON OSCI UNKNOWN")
+                    end
+
+
                 end
+
+
             end
         end
     end
