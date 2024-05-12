@@ -27,6 +27,7 @@ def get_header():
     header = header[4:].tobytes().decode('utf-8')
     return header
 
+# TODO Write device handler in seperate process, that handles the usb communication with the oscilloscope. 3 queues needed: one command queue for requests towards the oscilloscope and 2 input queues: header queue and data point queue
 def get_data(ch, yscale, yoffset):
     # first 4 bytes indicate the number of data bytes following
     try:
