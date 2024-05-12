@@ -62,12 +62,21 @@ function appendMeasurementPoints(buffer, amount_points, subtree, payload_offset)
     end
 end
 
+function GetTableLng(tbl)
+  local getN = 0
+  for n in pairs(tbl) do
+    getN = getN + 1
+  end
+  return getN
+end
 --
 -- This function dissects the
 -- USB bulk traffic to and from the OWON HDS2202S
 --
 function owon_bulk.dissector(buffer, pinfo, tree)
-
+    --print(buffer)
+    --print(buffer(23,4))
+    --print("PacketLen: " .. pinfo.cols['packet_len'])
     local USB_TRANSFER_TYPE_CONTROL = 0x02
     local USB_TRANSFER_TYPE_BULK = 0x03
 
@@ -79,13 +88,27 @@ function owon_bulk.dissector(buffer, pinfo, tree)
 
     -- dissect general usb information
     local payload_offset = 27
+    --local bu_tmp = buffer(21,1):uint()
     local usb_direction = bit.band(buffer(21,1):uint(), 0x80)
+    --bu_tmp = buffer(23,4)
+    --bu_tmp = buffer(23,4)
+
     local packet_data_length = buffer_to_uint32(buffer(23,4))
+    print("PaketLen PINFO" .. buffer:reported_len() .. " CALC Len: " .. packet_data_length)
     local bmAttributes_transfer = buffer(22,1):uint()
     -- dissect scpi input
     local scpi_id = 0x00
     if packet_data_length > 0 then
-        scpi_id = buffer(27,1):uint()
+        if  buffer(27,1):string() == "*" then
+            scpi_id = 0x2a
+        else
+            if buffer(27,1):string() == ":" then
+                scpi_id = 0x3a
+            end
+        end
+        if packet_data_length > 15 and buffer(payload_offset+6, 8):string() == "TIMEBASE" then
+            scpi_id = 0x4c
+        end
     end
 
     if bmAttributes_transfer == USB_TRANSFER_TYPE_BULK
