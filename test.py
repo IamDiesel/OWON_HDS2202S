@@ -8,6 +8,7 @@ import matplotlib.animation as animation
 """"""
 #    [Port 8] usb device
 # SOURCE 2.255.1
+# Wireshark filter usb.src == "2.255.1" or usb.dst == "2.255.1"
 dev = None
 def send(cmd):
     global dev
