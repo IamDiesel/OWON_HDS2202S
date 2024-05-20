@@ -1,5 +1,6 @@
 import queue
 import threading
+import sys
 
 
 class OWON_Handler(threading.Thread):
@@ -8,10 +9,11 @@ class OWON_Handler(threading.Thread):
     Responsible for parsing data from the OWON oscilloscope
     and wrapper for OWON Oscilloscope SCPI Commands
     """
-    def __init__(self, q, send_cmds_q, rcv_data_q):
-        self.q = q
+    def __init__(self, send_cmds_q, rcv_data_q):
+        self.q = queue.LifoQueue()
         self.send_cmds_q = send_cmds_q
         self.rcv_data_q = rcv_data_q
+        self._running = False
         super(OWON_Handler, self).__init__()
 
     def onThread(self, function, *args, **kwargs):
@@ -19,7 +21,8 @@ class OWON_Handler(threading.Thread):
 
 
     def run(self):
-        while True:
+        self._running = True
+        while(self._running):
             try:
                 function, args, kwargs = self.q.get_nowait()
                 function(*args, **kwargs)
@@ -27,8 +30,20 @@ class OWON_Handler(threading.Thread):
                 self.idle()
 
     def idle(self):
-        print("process send and rcv queues")
-        #TODO implement sending and receiving via USB_Handler
+        #print("implement additional rec events if they are sent from osci")
+        #TODO implement additional rec data from osci
+        pass
+
+    def testcall(self):
+        print("Test OWON_Handler")
+
+    def terminate(self):
+        self._running = False
+        sys.exit()
+
+
+
+
 
 
 
