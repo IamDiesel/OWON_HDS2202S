@@ -29,7 +29,6 @@ class OWON_USB_Handler:
 
         self._running = True
         self.send_cmds_q = queue.LifoQueue()
-        print(self.send_cmds_q)
         self.rcv_data_q = queue.LifoQueue()
         #self.rcv_ch1_q = queue.LifoQueue()
         #self.rcv_ch2_q
@@ -49,7 +48,7 @@ class OWON_USB_Handler:
             pass
 
         if(send_q_empty == False):
-            print("USB Handler received cmd")
+            #print("USB Handler received cmd")
             try:
                 # address taken from results of print(dev):   ENDPOINT 0x3: Bulk OUT
                 self.dev.write(1, cmd)
