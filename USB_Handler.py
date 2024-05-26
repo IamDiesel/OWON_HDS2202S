@@ -55,10 +55,11 @@ class OWON_USB_Handler:
                 # address taken from results of print(dev):   ENDPOINT 0x81: Bulk IN
                 result = (self.dev.read(0x81, 100000, 1000))
             except AttributeError:
-                result = array.array('i',[40])
+                result = None
                 pass
             try:
-                self.rcv_data_q.put(result.tobytes().decode('utf-8'))
+                #self.rcv_data_q.put(result.tobytes().decode('utf-8'))
+                self.rcv_data_q.put(result)
             except queue.Full:
                 print("Send queue is fulll, cmd:", cmd," res: ",result)
                 pass

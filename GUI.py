@@ -1,3 +1,5 @@
+import queue
+
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import threading
@@ -12,12 +14,20 @@ import sys
 
 class Controls:
 
-    def __init__(self, owon_handle, scpoescreen):
+    def __init__(self, owon_handle, scopescreen):
         self.owon_handle = owon_handle
-        self.scopescreen = scpoescreen
+        self.scopescreen = scopescreen
         self.x = np.arange(0, 1, 0.02)
         self.i = 1
     def ch1_hOffset(self, event):
+        print("Button pressed in GUI")
+        owon_handle.onThread(owon_handle.testcall)
+        self.scopescreen.set_xdata(self.x**self.i)
+        self.scopescreen.set_ydata(self.x)
+        self.i +=1
+        plt.draw()
+
+    def ch2_hOffset(self, event):
         print("Button pressed in GUI")
         owon_handle.onThread(owon_handle.testcall)
         self.scopescreen.set_xdata(self.x**self.i)
@@ -29,25 +39,44 @@ class Controls:
 class GUI(threading.Thread):
 
     def __init__(self, owon_handle, usb_handle):
-        #self.x = np.arange(0, 1, 0.02)
         self.interval_ms = 100
         self.owon_handle = owon_handle
         self.usb_handle = usb_handle
-        self.fig, self.scopescreen = plt.subplots()
+        #receive oscilloscope data from OWON_Handler via qui
+        self.gui_points_q = owon_handle.get_gui_points_q()
+        self.fig_gui, self.gui_screen = plt.subplots()
         plt.subplots_adjust(left=0.1, bottom=0.3)
-        self.scopescreen2, = plt.plot([],[])
-        #self.i = 1
+        #self.fig_scope, self.scopescreen = plt.subplots()
+        self.fig_scope, = plt.plot([],[])
+        self.gui_screen.set(xlabel='time (s)', ylabel='voltage (V)', title='HDS2202(S)-DATA-AQC')
+        self.gui_screen.grid(linestyle=':')
         self._running = False
-        #self.ani = None
-        self.ctrl_callback = Controls(self.owon_handle, self.scopescreen2)
-        ax_ch1_hOffset = self.fig.add_axes([0.0, 0.0, 0.2, 0.05])
+        self.ctrl_callback = Controls(self.owon_handle, self.fig_scope)
+        ax_ch1_hOffset = self.fig_gui.add_axes([0.0, 0.0, 0.2, 0.05])
+        ax_ch2_hOffset = self.fig_gui.add_axes([0.2, 0.0, 0.2, 0.05])
         self.btn_ch1_h_offset = Button(ax_ch1_hOffset, 'CH1 hOffset')
+        self.btn_ch2_h_offset = Button(ax_ch2_hOffset, 'CH2 hOffset')
         self.btn_ch1_h_offset.on_clicked(self.ctrl_callback.ch1_hOffset)
-        self.fig.canvas.mpl_connect('close_event', self.on_close)
+        self.btn_ch1_h_offset.on_clicked(self.ctrl_callback.ch2_hOffset)
+        self.fig_gui.canvas.mpl_connect('close_event', self.on_close)
         super(GUI, self).__init__()
 
 
     def update(self):
+        try:
+            ch_data_struct = self.gui_points_q.get_nowait()
+            self.fig_scope.set_xdata(ch_data_struct.get_X())
+            self.fig_scope.set_ydata(ch_data_struct.get_Y())
+            yscale = ch_data_struct.get_yscale()
+            xscale = ch_data_struct.get_xscale()
+            #print(yscale)
+            self.gui_screen.set_ylim(-4.0 * yscale, 4.0 * yscale)
+            self.gui_screen.set_xlim(-7 * xscale, 7*xscale)
+            #xpoints = np.linspace(-6 * xscale, 6 * xscale, 300)
+            plt.draw()
+        except queue.Empty:
+            pass
+
         #print("UPD")
         #self.scopescreen.cla()
         #xpoints = np.array([1, 8])
@@ -64,12 +93,6 @@ class GUI(threading.Thread):
         while(self._running):
             self.update()
             time.sleep(self.interval_ms/1000)
-
-
-    #def startAnimation(self):
-        #self.show()
-        #self.ani = animation.FuncAnimation(fig=self.fig, func=self.update, frames=100, interval=2000)  # 20 fps
-        #self.show()
 
     def show(self):
         plt.show()
