@@ -12,24 +12,34 @@ import sys
 
 class Controls:
 
-    def __init__(self, owon_handle, ):
+    def __init__(self, owon_handle, scpoescreen):
         self.owon_handle = owon_handle
+        self.scopescreen = scpoescreen
+        self.x = np.arange(0, 1, 0.02)
+        self.i = 1
     def ch1_hOffset(self, event):
         print("Button pressed in GUI")
         owon_handle.onThread(owon_handle.testcall)
-        #plt.draw()
+        self.scopescreen.set_xdata(self.x**self.i)
+        self.scopescreen.set_ydata(self.x)
+        self.i +=1
+        plt.draw()
 
 
 class GUI(threading.Thread):
 
     def __init__(self, owon_handle, usb_handle):
+        #self.x = np.arange(0, 1, 0.02)
         self.interval_ms = 100
         self.owon_handle = owon_handle
         self.usb_handle = usb_handle
         self.fig, self.scopescreen = plt.subplots()
+        plt.subplots_adjust(left=0.1, bottom=0.3)
+        self.scopescreen2, = plt.plot([],[])
+        #self.i = 1
         self._running = False
         #self.ani = None
-        self.ctrl_callback = Controls(self.owon_handle)
+        self.ctrl_callback = Controls(self.owon_handle, self.scopescreen2)
         ax_ch1_hOffset = self.fig.add_axes([0.0, 0.0, 0.2, 0.05])
         self.btn_ch1_h_offset = Button(ax_ch1_hOffset, 'CH1 hOffset')
         self.btn_ch1_h_offset.on_clicked(self.ctrl_callback.ch1_hOffset)
@@ -39,12 +49,14 @@ class GUI(threading.Thread):
 
     def update(self):
         #print("UPD")
-        self.scopescreen.cla()
-        xpoints = np.array([1, 8])
-        ypoints = np.array([3, 10])
-
-        plt.plot(xpoints, ypoints)
+        #self.scopescreen.cla()
+        #xpoints = np.array([1, 8])
+        #ypoints = np.array([3, 10])
+        #plt.set
+        #plt.plot(xpoints, ypoints)
 #        self.btn_ch1_h_offset.on_clicked(self.ctrl_callback.ch1_hOffset)
+        #plt.draw()
+        pass
 
 
     def run(self):
