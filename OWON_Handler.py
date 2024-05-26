@@ -12,6 +12,7 @@ class OWON_Handler(threading.Thread):
     def __init__(self, send_cmds_q, rcv_data_q):
         self.q = queue.LifoQueue()
         self.send_cmds_q = send_cmds_q
+        print(self.send_cmds_q)
         self.rcv_data_q = rcv_data_q
         self._running = False
         super(OWON_Handler, self).__init__()
@@ -32,10 +33,16 @@ class OWON_Handler(threading.Thread):
     def idle(self):
         #print("implement additional rec events if they are sent from osci")
         #TODO implement additional rec data from osci
-        pass
+        try:
+            result = self.rcv_data_q.get_nowait()
+            print(result)
+        except queue.Empty:
+            pass
+
 
     def testcall(self):
         print("Test OWON_Handler")
+        self.send_cmds_q.put('*IDN?')
 
     def terminate(self):
         self._running = False
