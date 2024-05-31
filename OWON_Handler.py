@@ -234,6 +234,149 @@ class OWON_Handler(threading.Thread):
 
         return time_offset_div
 
+    def set_aquire_mode_peak(self):
+        """sets the aquisition mode of the oscilloscope: Can be either peak or sample"""
+        try:
+            self.send_cmds_q.put(":ACQuire:MODE PEAK")
+        except queue.Full:
+            pass
+
+    def set_aquire_mode_sample(self):
+        """sets the aquisition mode of the oscilloscope: Can be either peak or sample"""
+        try:
+            self.send_cmds_q.put(":ACQuire:MODE SAMPle")
+        except queue.Full:
+            pass
+
+    def get_aquire_mode(self):
+        aquire_mode = None
+        try:
+            self.send_cmds_q.put(":ACQuire:MODE?")
+        except queue.Full:
+            pass
+
+        try:
+            aquire_mode = self.rcv_data_q.get()
+        except queue.Empty:
+            pass
+        return aquire_mode
+
+    def set_memory_depth(self, high_resolution=True):
+        """sets the memory depth to 4K or 8K. This is the amount of waveform points that a single trigger can store"""
+        mem_depth = "4K"
+        if high_resolution:
+            mem_depth = "8K"
+
+        try:
+            self.send_cmds_q.put(":ACQuire :DEPMEM {}".format(mem_depth))
+        except queue.Full:
+            pass
+
+    def get_memory_depth(self):
+        """returns the memory depth (4K or 8K). This is the amount of waveform points that a single trigger can store"""
+        mem_depth = None
+        res = None
+        try:
+            self.send_cmds_q.put(":ACQuire :DEPMEM?")
+        except queue.Full:
+            pass
+
+        try:
+            mem_depth = self.rcv_data_q.get()
+            if(mem_depth == "4K"):
+                res = 4000
+            elif(mem_depth == "8K"):
+                res = 8000
+        except queue.Empty:
+            pass
+        return res
+
+    def set_display_channel(self,channel=1, turn_on = True):
+        """turns the selected channel on or off. Channels are 1 or 2. turn_on = False means to turn off"""
+        translate = ["OFF", "ON"]
+        if(channel == 1 or channel == 2):
+            try:
+                self.send_cmds_q.put(":CH{channel}:DISPlay {state}".format(channel=channel, state=translate[int(turn_on)]))
+            except queue.Full:
+                pass
+
+    def get_display_channel(self, channel=1):
+        """returns weather the selected channel is displayed or not
+        true: display = on, false: display=off"""
+        translate = {"OFF":False, "ON":True}
+        ch_state = None
+        try:
+            self.send_cmds_q.put(":CH{channel}:DISPlay?".format(channel=channel))
+        except queue.Full:
+            pass
+
+        try:
+            ch_state = self.rcv_data_q.get()
+        except queue.Empty:
+            pass
+        return translate[ch_state]
+
+    def set_coupling_channel(self,channel=1, coupling="DC"):
+        """sets the coupling of the selected channel either to AC, DC or GND"""
+        translate = ["AC", "DC", "GND"]
+        if coupling not in translate:
+            raise ValueError("Coupling must either be: {}",translate)
+        if(channel == 1 or channel == 2):
+            try:
+                self.send_cmds_q.put(":CH{channel}:COUPling {coupling}".format(channel=channel, coupling=coupling))
+            except queue.Full:
+                pass
+
+    def get_coupling_channel(self, channel=1):
+        """returns the coupling of the selected channel. Can either be AC, DC or GND"""
+        ch_coupling = None
+        try:
+            self.send_cmds_q.put(":CH{channel}:COUPling?".format(channel=channel))
+        except queue.Full:
+            pass
+
+        try:
+            ch_coupling = self.rcv_data_q.get()
+        except queue.Empty:
+            pass
+        return ch_coupling
+
+    def set_probe_channel(self,channel=1, probe=1):
+        """sets the probing factor of the selected channel
+        values can be 1, 10, 100, 1000"""
+        valid = ["1", "10", "100", "1000"]
+        if probe not in valid:
+            raise ValueError("Probe must either be: {}".format(valid))
+        if(channel == 1 or channel == 2):
+            try:
+                self.send_cmds_q.put(":CH{channel}:PROBe {probe}X".format(channel=channel, probe=probe))
+            except queue.Full:
+                pass
+
+    def get_probe_channel(self, channel=1):
+        """returns the probing factor of the selected channel
+        values can be 1, 10, 100, 1000"""
+        ch_probe = None
+        try:
+            self.send_cmds_q.put(":CH{channel}:PROBe?".format(channel=channel))
+        except queue.Full:
+            pass
+
+        try:
+            ch_probe = self.rcv_data_q.get()
+        except queue.Empty:
+            pass
+        return int(ch_probe[:-1])
+
+
+
+
+
+
+
+
+
+
 
 
 
