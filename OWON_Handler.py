@@ -24,6 +24,13 @@ class OWON_Handler(threading.Thread):
             "u": 1000000,  # micro
             "n": 1000000000,  # nano
         }
+        self.horizontal_scale_steps = [0.0000020, 0.0000050, 0.0000100, 0.0000200, 0.0000500, 0.000100, 0.000200, 0.000500, 0.0010, 0.002,
+                 0.005,0.010, 0.020, 0.050, 0.100, 0.200, 0.500, 1.0, 2.0, 5.0, 10, 20, 50, 100, 200, 500, 1000.0, 2000.0,
+                 5000.0,10000, 20000, 50000, 100000, 200000, 500000, 1000000]
+        self.horizontal_scale_steps_str = ["2.0ns", "5.0ns", "10.0ns", "20.0ns", "50.0ns", "100ns", "200ns", "500ns", "1.0us", "2.0us",
+                     "5.0us","10us", "20us", "50us", "100us", "200us", "500us", "1.0ms", "2.0ms", "5.0ms", "10ms", "20ms",
+                     "50ms","100ms", "200ms", "500ms", "1.0s", "2.0s", "5.0s", "10s", "20s", "50s", "100s", "200s", "500s",
+                     "1000s"]
         super(OWON_Handler, self).__init__()
 
     def get_gui_points_q(self):
@@ -155,6 +162,87 @@ class OWON_Handler(threading.Thread):
             except queue.Full:
                 print("OWON Handler: GUI queue is full")
                 pass
+
+
+    def get_idn(self):
+        #returns <Manufacturer>,<model>,<serial number>,X.XX.XX
+        #XXXX,XXXXXXX,2128009,V2.1.1.5
+        owon_idn = None
+        self.send_cmds_q.put('*IDN?')
+        try:
+            owon_idn = self.rcv_data_q.get()
+            #print("OWON IDN: ", owon_idn)
+        except queue.Empty:
+            pass
+        return owon_idn
+
+
+    def set_horizontal_scale(self,hor_scale_ms):
+        """This functions sets the scale of the main time base"""
+        #first, get closest floor value from the allowed steps list --> 1.5 will return 1.0ms
+        step_res = None
+        index_res = None
+        for index, step in enumerate(self.horizontal_scale_steps):
+            if index < (len(self.horizontal_scale_steps) - 1) and step_res == None:
+                if hor_scale_ms >= step and hor_scale_ms < self.horizontal_scale_steps[index + 1]:
+                    step_res = step
+                    index_res = index
+                    break
+            else:
+                step_res = step
+                index_res = index
+        step_res_str = self.horizontal_scale_steps_str[index_res]
+        #send value to oscilloscope
+        try:
+            self.send_cmds_q.put(":HORIzontal:SCALe {}".format(step_res_str))
+        except queue.Full:
+            pass
+        #return step_res_str
+
+    def get_horizontal_scale(self):
+        hor_scale = None
+        try:
+            self.send_cmds_q.put(":HORIzontal:SCALe?")
+        except queue.Full:
+            pass
+
+        try:
+            hor_scale = self.rcv_data_q.get()
+        except queue.Empty:
+            pass
+        return hor_scale
+
+    def set_horizontal_offset(self,div_offset):
+        """sets the horizontal offset as factor of the main time base
+        e.g. main time base = 500ms/div and div_offset = 3 div --> horizontal time offset = 1500ms"""
+        try:
+            self.send_cmds_q.put(":HORizontal:OFFset {}".format(int(div_offset)))
+        except queue.Full:
+            pass
+
+    def get_horizontal_offset_in_div(self):
+        time_offset_div = None
+        try:
+            self.send_cmds_q.put(":HORizontal:OFFset?")
+        except queue.Full:
+            pass
+
+        try:
+            time_offset_div = self.rcv_data_q.get()
+        except queue.Empty:
+            pass
+
+        return time_offset_div
+
+
+
+
+
+
+
+
+
+
 
 
 
